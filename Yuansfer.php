@@ -117,7 +117,7 @@ function Yuansfer_link($params)
 
     $postfields = array();
 
-    $postfields['reference'] = $invoiceId;
+    $postfields['reference'] = $invoiceId . '|' . time();
     $postfields['amount'] = $amount;
     $postfields['currency'] = $currencyCode;
     $postfields['ipnUrl'] = $systemUrl . 'modules/gateways/callback/' . $moduleName . '.php';
@@ -128,13 +128,14 @@ function Yuansfer_link($params)
     $postfields['storeNo'] = $Store_No;
     $postfields['callbackUrl'] = $returnUrl;
     $postfields['description'] = $description;
-
+    $postfields['timeout'] =60;
     ksort($postfields, SORT_STRING);
     $str = '';
     foreach ($postfields as $k => $v) {
         $str .= $k . '=' . $v . '&';
     }
     $postfields['verifySign'] = md5($str . md5($secretKey));
+    logActivity($str);
     $ch = curl_init($url);
     curl_setopt_array($ch, array(
         CURLOPT_RETURNTRANSFER => true,
@@ -143,6 +144,7 @@ function Yuansfer_link($params)
         CURLOPT_POSTFIELDS => http_build_query($postfields),
     ));
     $result = curl_exec($ch);
+    logActivity($result);
     $json_result = json_decode($result, true);
     $cashier_url = $json_result['result']['cashierUrl'];
     $htmlOutput = '<form method="get" action="' . $cashier_url . '">';
@@ -225,8 +227,7 @@ function Yuansfer_link($params)
  *
  * @return array Transaction response status
  */
-/**
- * function gatewaymodule_cancelSubscription($params)
+/* function gatewaymodule_cancelSubscription($params)
 {
     // Gateway Configuration Parameters
     $accountId = $params['MERCHANT_NO'];
@@ -254,4 +255,4 @@ function Yuansfer_link($params)
     );
 
 }
- *  */
+ */
