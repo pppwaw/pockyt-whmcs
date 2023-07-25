@@ -46,13 +46,6 @@ function pockyt_config()
             'Default' => '',
             'Description' => 'Pockyt API token.',
         ),
-        'VENDOR' => array(
-            'FriendlyName' => 'Vendor',
-            'Type' => 'text',
-            'Size' => '25',
-            'Default' => 'alipay',
-            'Description' => 'Pockyt vendor.',
-        ),
         'SANDBOX' => array(
             'FriendlyName' => 'Sandbox',
             'Type' => 'yesno',
@@ -68,7 +61,7 @@ function sendRequestToPockyt($url, $postfields) {
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($postfields));
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($postfields));
     curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-type: application/json'));
 
     // Execute curl and get the response
@@ -76,7 +69,14 @@ function sendRequestToPockyt($url, $postfields) {
 
     // Close the curl
     curl_close($ch);
-
+    logModuleCall(
+        'pockyt',
+        $url,
+        json_encode($postfields),
+        $response,
+        json_decode($response, true),
+        array()
+    );
     return json_decode($response, true);
 }
 
@@ -85,7 +85,7 @@ function pockyt_link($params) {
     $merchantNo = $params['MERCHANT_NO'];
     $storeNo = $params['STORE_NO'];
     $apiToken = $params['API_TOKEN'];  // Replace with your actual API token
-    $vendor = $params['VENDOR'];
+
     // Payment Parameters
     $amount = $params['amount'];
     $currency = $params['currency'];
@@ -108,13 +108,13 @@ function pockyt_link($params) {
     $postfields['storeNo'] = $storeNo;
     $postfields['amount'] = $amount;
     $postfields['currency'] = $currency;
+    $postfields['settleCurrency'] = 'USD';
+    $postfields['vendor'] = "alipay";
     $postfields['terminal'] = 'ONLINE';
     $postfields['ipnUrl'] = $systemUrl . '/modules/gateways/callback/pockyt.php';
     $postfields['callbackUrl'] = $returnUrl;
-    $postfields['vendor'] = $vendor;
-    $postfields['reference'] = $invoiceid;  // Replace this with your actual reference
-    $postfields['settleCurrency'] = 'USD';
-    $postfields['description'] = $description;  // Replace this with your actual description
+    $postfields['reference'] = $invoiceid;
+    $postfields['description'] = $description;
     $postfields['verifySign'] = calculateVeriSign($postfields, $apiToken);
 
     // Prepare the postfields
@@ -130,6 +130,7 @@ function pockyt_link($params) {
         $htmlOutput .= '<input type="submit" value='. $langpaynow . ' />';
         $htmlOutput .= '</form>';
     } else {
+        logActivity('met error! '.var_export($response, true), $params['clientdetails']['model']['Contact']['id']);
         // Handle error
         $htmlOutput = 'Error: ' . $response['ret_msg'];
     }
@@ -137,22 +138,12 @@ function pockyt_link($params) {
 }
 function calculateVeriSign($params, $apiToken)
 {
-    // Sort the parameters alphabetically according to the parameter name
-    ksort($params);
-
-    // Concatenate the parameter names and values using '=' and '&' characters
-    $concatenatedParams = http_build_query($params, '', '&');
-
-    // Calculate the MD5 value of API token
-    $md5ApiToken = md5($apiToken);
-
-    // Append the MD5 hash value of your API token to the end of your parameters with the '&' prefix
-    $concatenatedParams .= "&" . $md5ApiToken;
-
-    // Calculate the MD5 hash value of the result.
-    $veriSign = md5($concatenatedParams);
-
-    return $veriSign;
+    ksort($params, SORT_STRING);
+    $str = '';
+    foreach ($params as $k => $v) {
+        $str .= $k . '=' . $v . '&';
+    }
+    return md5($str . md5($apiToken));
 }
 
 function pockyt_refund($params) {
@@ -163,14 +154,11 @@ function pockyt_refund($params) {
     $amount = $params['amount'];
     $currency = $params['currency'];
     $transactionId = $params['transid'];
-    $invoiceid = $params['invoiceid'];
-    // System Parameters
-    $systemUrl = $params['systemurl'];
     // Endpoint URL
     if ($params['SANDBOX']) {
-        $url = 'https://mapi.yuansfer.yunkeguan.com/online/v3/secure-pay';
+        $url = 'https://mapi.yuansfer.yunkeguan.com/app-data-search/v3/refund';
     } else {
-        $url = 'https://mapi.yuansfer.com/online/v3/secure-pay';
+        $url = 'https://mapi.yuansfer.com/app-data-search/v3/refund';
     }
 
     // Prepare the postfields
@@ -180,7 +168,6 @@ function pockyt_refund($params) {
     $postfields['refundAmount'] = $amount;
     $postfields['currency'] = $currency;
     $postfields['transactionNo'] = $transactionId;
-    $postfields['reference'] = $invoiceid;  // Replace this with your actual reference
     $postfields['settleCurrency'] = 'USD';
     $postfields['verifySign'] = calculateVeriSign($postfields, $apiToken);
 
@@ -195,6 +182,7 @@ function pockyt_refund($params) {
         $refundTransactionId = $response['result']['refundTransactionNo'];
     } else {
         // Handle error
+        logActivity('met error! '.var_export($response, true), 0);
         $status = 'error';
         $refundTransactionId = '';
     }

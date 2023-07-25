@@ -3,25 +3,16 @@
 require_once __DIR__ . '/../../../init.php';
 require_once __DIR__ . '/../../../includes/gatewayfunctions.php';
 require_once __DIR__ . '/../../../includes/invoicefunctions.php';
-function calculateVeriSign($params, $apiToken)
+function calculateSign($params, $apiToken)
 {
-    // Sort the parameters alphabetically according to the parameter name
-    ksort($params);
-
-    // Concatenate the parameter names and values using '=' and '&' characters
-    $concatenatedParams = http_build_query($params, '', '&');
-
-    // Calculate the MD5 value of API token
-    $md5ApiToken = md5($apiToken);
-
-    // Append the MD5 hash value of your API token to the end of your parameters with the '&' prefix
-    $concatenatedParams .= "&" . $md5ApiToken;
-
-    // Calculate the MD5 hash value of the result.
-    $veriSign = md5($concatenatedParams);
-
-    return $veriSign;
+    ksort($params, SORT_STRING);
+    $str = '';
+    foreach ($params as $k => $v) {
+        $str .= $k . '=' . $v . '&';
+    }
+    return md5($str . md5($apiToken));
 }
+
 // Fetch gateway configuration parameters.
 $gatewayParams = getGatewayVariables("pockyt");
 
@@ -29,7 +20,7 @@ $gatewayParams = getGatewayVariables("pockyt");
 if (!$gatewayParams['type']) {
     die("Module Not Activated");
 }
-
+logTransaction('pockyt', $_POST, "start");
 // Retrieve data returned in payment gateway callback
 // Varies per payment gateway
 $params = [];
@@ -47,13 +38,13 @@ $params["time"] = $param_post["time"];
 $params["transactionNo"] = $param_post["transactionNo"];
 $token = $gatewayParams['API_TOKEN'];
 $paymentAmount = $params['amount'];
-$sign = calculateVeriSign($params, $token);
+$sign = calculateSign($params, $token);
 
 $invoiceId = checkCbInvoiceID($invoiceId, "pockyt"); //查询invoice id是否存在
 checkCbTransID($transactionId); //验证回调事务
 if($sign == $verifySign)
 {
-    logTransaction($gatewayParams['name'], $_POST, $status);
+    logTransaction('pockyt', $_POST, $status);
     if ($status == "success"){
         addInvoicePayment(
             $invoiceId,
@@ -66,7 +57,7 @@ if($sign == $verifySign)
     }
 }
 else{
-    logTransaction("pockyt", $_POST, "fail");
+    logTransaction("pockyt", $_POST, "verify sign fail");
     die("fail");
 }
 
