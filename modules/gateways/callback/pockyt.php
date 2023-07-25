@@ -1,32 +1,29 @@
 <?php
-/**
- * WHMCS Sample Payment Callback File
- *
- * This sample file demonstrates how a payment gateway callback should be
- * handled within WHMCS.
- *
- * It demonstrates verifying that the payment gateway module is active,
- * validating an Invoice ID, checking for the existence of a Transaction ID,
- * Logging the Transaction for debugging and Adding Payment to an Invoice.
- *
- * For more information, please refer to the online documentation.
- *
- * @see https://developers.whmcs.com/payment-gateways/callbacks/
- *
- * @copyright Copyright (c) WHMCS Limited 2017
- * @license http://www.whmcs.com/license/ WHMCS Eula
- */
-
 // Require libraries needed for gateway module functions.
 require_once __DIR__ . '/../../../init.php';
 require_once __DIR__ . '/../../../includes/gatewayfunctions.php';
 require_once __DIR__ . '/../../../includes/invoicefunctions.php';
+function calculateVeriSign($params, $apiToken)
+{
+    // Sort the parameters alphabetically according to the parameter name
+    ksort($params);
 
-// Detect module name from filename.
-$gatewayModuleName = basename(__FILE__, '.php');
+    // Concatenate the parameter names and values using '=' and '&' characters
+    $concatenatedParams = http_build_query($params, '', '&');
 
+    // Calculate the MD5 value of API token
+    $md5ApiToken = md5($apiToken);
+
+    // Append the MD5 hash value of your API token to the end of your parameters with the '&' prefix
+    $concatenatedParams .= "&" . $md5ApiToken;
+
+    // Calculate the MD5 hash value of the result.
+    $veriSign = md5($concatenatedParams);
+
+    return $veriSign;
+}
 // Fetch gateway configuration parameters.
-$gatewayParams = getGatewayVariables($gatewayModuleName);
+$gatewayParams = getGatewayVariables("pockyt");
 
 // Die if module is not active.
 if (!$gatewayParams['type']) {
@@ -37,7 +34,7 @@ if (!$gatewayParams['type']) {
 // Varies per payment gateway
 $params = [];
 $param_post = $_POST;
-$invoiceId = explode('|',$param_post["reference"])[0];
+$invoiceId = $param_post["reference"];
 $status = $param_post["status"];
 $transactionId = $param_post["transactionNo"];
 $verifySign = $param_post['verifySign'];
@@ -50,17 +47,9 @@ $params["time"] = $param_post["time"];
 $params["transactionNo"] = $param_post["transactionNo"];
 $token = $gatewayParams['API_TOKEN'];
 $paymentAmount = $params['amount'];
+$sign = calculateVeriSign($params, $token);
 
-ksort($params, SORT_STRING);
-
-$str = '';
-foreach ($params as $k => $v) {
-    $str .= $k . '=' . $v . '&';
-}
-logActivity($str,0);
-$sign = md5($str . md5($token));
-
-$invoiceId = checkCbInvoiceID($invoiceId, $gatewayModuleName); //查询invoice id是否存在
+$invoiceId = checkCbInvoiceID($invoiceId, "pockyt"); //查询invoice id是否存在
 checkCbTransID($transactionId); //验证回调事务
 if($sign == $verifySign)
 {
@@ -71,14 +60,13 @@ if($sign == $verifySign)
             $transactionId,
             $paymentAmount,
             0.00,
-            $gatewayModuleName
+            "pockyt"
         );
-        logTransaction($gatewayModuleName, $_POST, "success");
         die("success");
     }
 }
 else{
-    logTransaction($gatewayModuleName, $_POST, "fail");
+    logTransaction("pockyt", $_POST, "fail");
     die("fail");
 }
 
