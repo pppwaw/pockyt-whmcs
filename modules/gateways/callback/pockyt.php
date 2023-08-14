@@ -32,7 +32,7 @@ $verifySign = $param_post['verifySign'];
 $params["amount"] = $param_post["amount"];
 $params["currency"] = $param_post["currency"];
 # split to get reference
-$params["reference"] = explode("-", $param_post["reference"])[0];
+$params["reference"] = $param_post["reference"];
 $params["settleCurrency"] = $param_post["settleCurrency"];
 $params["status"] = $param_post["status"];
 $params["time"] = $param_post["time"];
