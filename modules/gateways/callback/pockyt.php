@@ -31,7 +31,8 @@ $transactionId = $param_post["transactionNo"];
 $verifySign = $param_post['verifySign'];
 $params["amount"] = $param_post["amount"];
 $params["currency"] = $param_post["currency"];
-$params["reference"] = $param_post["reference"];
+# split to get reference
+$params["reference"] = preg_split("-", $param_post["reference"])[0];
 $params["settleCurrency"] = $param_post["settleCurrency"];
 $params["status"] = $param_post["status"];
 $params["time"] = $param_post["time"];
@@ -42,10 +43,9 @@ $sign = calculateSign($params, $token);
 
 $invoiceId = checkCbInvoiceID($invoiceId, "pockyt"); //查询invoice id是否存在
 checkCbTransID($transactionId); //验证回调事务
-if($sign == $verifySign)
-{
+if ($sign == $verifySign) {
     logTransaction('pockyt', $_POST, $status);
-    if ($status == "success"){
+    if ($status == "success") {
         addInvoicePayment(
             $invoiceId,
             $transactionId,
@@ -55,8 +55,7 @@ if($sign == $verifySign)
         );
         die("success");
     }
-}
-else{
+} else {
     logTransaction("pockyt", $_POST, "verify sign fail");
     die("fail");
 }

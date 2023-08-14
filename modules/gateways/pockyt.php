@@ -53,7 +53,9 @@ function pockyt_config()
         )
     );
 }
-function sendRequestToPockyt($url, $postfields) {
+
+function sendRequestToPockyt($url, $postfields)
+{
     // Initiate curl
     $ch = curl_init();
 
@@ -80,7 +82,8 @@ function sendRequestToPockyt($url, $postfields) {
     return json_decode($response, true);
 }
 
-function pockyt_link($params) {
+function pockyt_link($params)
+{
     // Config Parameters
     $merchantNo = $params['MERCHANT_NO'];
     $storeNo = $params['STORE_NO'];
@@ -113,7 +116,8 @@ function pockyt_link($params) {
     $postfields['terminal'] = 'ONLINE';
     $postfields['ipnUrl'] = $systemUrl . '/modules/gateways/callback/pockyt.php';
     $postfields['callbackUrl'] = $returnUrl;
-    $postfields['reference'] = $invoiceid;
+    # add timestamp to prevent expiration
+    $postfields['reference'] = $invoiceid . "-" . time();
     $postfields['description'] = $description;
     $postfields['verifySign'] = calculateVeriSign($postfields, $apiToken);
 
@@ -127,15 +131,16 @@ function pockyt_link($params) {
         // Use the cashierUrl from the response as the form action
         $url = $response['result']['cashierUrl'];
         $htmlOutput = '<form method="post" action="' . $url . '">';
-        $htmlOutput .= '<input type="submit" value='. $langpaynow . ' />';
+        $htmlOutput .= '<input type="submit" value=' . $langpaynow . ' />';
         $htmlOutput .= '</form>';
     } else {
-        logActivity('met error! '.var_export($response, true), $params['clientdetails']['model']['Contact']['id']);
+        logActivity('met error! ' . var_export($response, true), $params['clientdetails']['model']['Contact']['id']);
         // Handle error
         $htmlOutput = 'Error: ' . $response['ret_msg'];
     }
     return $htmlOutput;
 }
+
 function calculateVeriSign($params, $apiToken)
 {
     ksort($params, SORT_STRING);
@@ -146,7 +151,8 @@ function calculateVeriSign($params, $apiToken)
     return md5($str . md5($apiToken));
 }
 
-function pockyt_refund($params) {
+function pockyt_refund($params)
+{
     $merchantNo = $params['MERCHANT_NO'];
     $storeNo = $params['STORE_NO'];
     $apiToken = $params['API_TOKEN'];
@@ -182,7 +188,7 @@ function pockyt_refund($params) {
         $refundTransactionId = $response['result']['refundTransactionNo'];
     } else {
         // Handle error
-        logActivity('met error! '.var_export($response, true), 0);
+        logActivity('met error! ' . var_export($response, true), 0);
         $status = 'error';
         $refundTransactionId = '';
     }
