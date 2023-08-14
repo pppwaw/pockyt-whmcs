@@ -25,7 +25,7 @@ logTransaction('pockyt', $_POST, "start");
 // Varies per payment gateway
 $params = [];
 $param_post = $_POST;
-$invoiceId = $param_post["reference"];
+$invoiceId = preg_split("-", $param_post["reference"])[0];
 $status = $param_post["status"];
 $transactionId = $param_post["transactionNo"];
 $verifySign = $param_post['verifySign'];
