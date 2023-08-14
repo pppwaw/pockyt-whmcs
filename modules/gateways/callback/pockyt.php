@@ -25,14 +25,14 @@ logTransaction('pockyt', $_POST, "start");
 // Varies per payment gateway
 $params = [];
 $param_post = $_POST;
-$invoiceId = preg_split("-", $param_post["reference"])[0];
+$invoiceId = explode("-", $param_post["reference"])[0];
 $status = $param_post["status"];
 $transactionId = $param_post["transactionNo"];
 $verifySign = $param_post['verifySign'];
 $params["amount"] = $param_post["amount"];
 $params["currency"] = $param_post["currency"];
 # split to get reference
-$params["reference"] = preg_split("-", $param_post["reference"])[0];
+$params["reference"] = explode("-", $param_post["reference"])[0];
 $params["settleCurrency"] = $param_post["settleCurrency"];
 $params["status"] = $param_post["status"];
 $params["time"] = $param_post["time"];
